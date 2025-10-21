@@ -9,6 +9,7 @@ import Landing from "./pages/Landing";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import LeaveApplication from "./pages/LeaveApplication";
 import PendingApproval from "./pages/PendingApproval";
 import Unauthorized from "./pages/Unauthorized";
 import AdminPusatDashboard from "./pages/AdminPusatDashboard";
@@ -34,6 +35,14 @@ const App = () => (
               element={
                 <ProtectedRoute requireActive>
                   <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/leave/new" 
+              element={
+                <ProtectedRoute requireActive>
+                  <LeaveApplication />
                 </ProtectedRoute>
               } 
             />

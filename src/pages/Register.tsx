@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, UserPlus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -248,11 +249,12 @@ const Register = () => {
 
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="address">Alamat</Label>
-                <Input
+                <Textarea
                   id="address"
                   placeholder="Alamat lengkap"
                   value={formData.address}
                   onChange={(e) => handleChange('address', e.target.value)}
+                  rows={3}
                 />
               </div>
 

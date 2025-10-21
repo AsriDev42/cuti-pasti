@@ -4,12 +4,9 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { LeaveBalanceCards } from "@/components/LeaveBalanceCards";
+import { LeaveHistory } from "@/components/LeaveHistory";
 import {
-  Calendar,
-  FileText,
-  Clock,
-  CheckCircle,
-  XCircle,
   LogOut,
   User,
   Plus,
@@ -46,29 +43,8 @@ const Dashboard = () => {
       title: "Saldo Cuti Tahunan",
       value: "12",
       subtitle: "dari 12 hari",
-      icon: Calendar,
+      icon: User,
       color: "text-success"
-    },
-    {
-      title: "Pengajuan Pending",
-      value: "0",
-      subtitle: "menunggu persetujuan",
-      icon: Clock,
-      color: "text-warning"
-    },
-    {
-      title: "Cuti Disetujui",
-      value: "0",
-      subtitle: "tahun ini",
-      icon: CheckCircle,
-      color: "text-success"
-    },
-    {
-      title: "Cuti Ditolak",
-      value: "0",
-      subtitle: "tahun ini",
-      icon: XCircle,
-      color: "text-destructive"
     }
   ];
 
@@ -125,7 +101,10 @@ const Dashboard = () => {
                     Admin Pusat
                   </Button>
                 )}
-                <Button className="bg-gradient-primary hover:opacity-90">
+                <Button 
+                  className="bg-gradient-primary hover:opacity-90"
+                  onClick={() => navigate("/leave/new")}
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   Ajukan Cuti
                 </Button>
@@ -134,47 +113,14 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => (
-            <Card key={index} className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className={`w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center`}>
-                    <stat.icon className="w-5 h-5 text-white" />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">{stat.title}</p>
-                  <p className="text-3xl font-bold text-foreground">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground">{stat.subtitle}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        {/* Leave Balances */}
+        <div className="mb-8">
+          <h2 className="text-xl font-bold mb-4">Saldo Cuti</h2>
+          <LeaveBalanceCards />
         </div>
 
-        {/* Recent Leaves - Empty State */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="w-5 h-5" />
-                  Riwayat Pengajuan Cuti
-                </CardTitle>
-                <CardDescription>Pengajuan cuti terbaru Anda</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-12 text-muted-foreground">
-              <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>Belum ada pengajuan cuti</p>
-              <p className="text-sm">Mulai ajukan cuti untuk melihat riwayat di sini</p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Leave History */}
+        <LeaveHistory />
       </div>
     </div>
   );
