@@ -11,24 +11,20 @@ interface Profile {
   email: string;
   phone: string;
   unit_id: string | null;
-  position: string;
-  rank: string;
-  join_date: string | null;
+  jabatan: string;
+  pangkat_golongan: string;
+  joined_date: string | null;
   address: string | null;
-  avatar_url: string | null;
+  photo_url: string | null;
+  role: 'user' | 'admin_unit' | 'admin_pusat';
   status: 'pending_approval' | 'active' | 'inactive' | 'rejected';
   rejection_reason: string | null;
-}
-
-interface UserRole {
-  role: 'user' | 'admin_unit' | 'admin_pusat';
 }
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
-  roles: UserRole[];
   loading: boolean;
   signUp: (data: SignUpData) => Promise<{ error: any }>;
   signIn: (identifier: string, password: string) => Promise<{ error: any }>;
@@ -45,7 +41,7 @@ interface SignUpData {
   email: string;
   password: string;
   phone: string;
-  unit_id: string;
+  unit_id: string | null;
   position: string;
   rank: string;
   join_date?: string;
@@ -66,7 +62,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [roles, setRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
@@ -83,18 +78,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       setProfile(profileData);
-
-      const { data: rolesData, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId);
-
-      if (rolesError) {
-        console.error('Error fetching roles:', rolesError);
-        return;
-      }
-
-      setRoles(rolesData || []);
     } catch (error) {
       console.error('Error in fetchProfile:', error);
     }
@@ -112,7 +95,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }, 0);
         } else {
           setProfile(null);
-          setRoles([]);
         }
       }
     );
@@ -134,25 +116,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const redirectUrl = `${window.location.origin}/`;
       
-      const { error } = await supabase.auth.signUp({
+      // First create auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
           emailRedirectTo: redirectUrl,
-          data: {
-            nip: data.nip,
-            full_name: data.full_name,
-            phone: data.phone,
-            unit_id: data.unit_id,
-            position: data.position,
-            rank: data.rank,
-            join_date: data.join_date,
-            address: data.address,
-          }
         }
       });
 
-      return { error };
+      if (authError) return { error: authError };
+      if (!authData.user) return { error: new Error('User creation failed') };
+
+      // Then create profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: authData.user.id,
+          nip: data.nip,
+          full_name: data.full_name,
+          email: data.email,
+          phone: data.phone,
+          unit_id: data.unit_id,
+          jabatan: data.position,
+          pangkat_golongan: data.rank,
+          joined_date: data.join_date || null,
+          address: data.address || null,
+          role: 'user',
+          status: 'pending_approval'
+        });
+
+      if (profileError) {
+        // If profile creation fails, delete the auth user
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        return { error: profileError };
+      }
+
+      return { error: null };
     } catch (error) {
       return { error };
     }
@@ -160,8 +160,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (identifier: string, password: string) => {
     try {
+      // Check if identifier is email or NIP
+      let email = identifier;
+      
+      if (!identifier.includes('@')) {
+        // It's a NIP, get email from profiles
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('nip', identifier)
+          .maybeSingle();
+
+        if (profileError || !profileData) {
+          return { error: new Error('NIP tidak ditemukan') };
+        }
+
+        email = profileData.email;
+      }
+
       const { error } = await supabase.auth.signInWithPassword({
-        email: identifier,
+        email: email,
         password: password,
       });
 
@@ -177,14 +195,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       setSession(null);
       setProfile(null);
-      setRoles([]);
     } catch (error) {
       console.error('Error signing out:', error);
     }
   };
 
   const hasRole = (role: 'user' | 'admin_unit' | 'admin_pusat'): boolean => {
-    return roles.some(r => r.role === role);
+    return profile?.role === role;
   };
 
   const isAdminPusat = (): boolean => hasRole('admin_pusat');
@@ -200,7 +217,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     session,
     profile,
-    roles,
     loading,
     signUp,
     signIn,
