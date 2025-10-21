@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, UserPlus } from "lucide-react";
@@ -23,12 +22,15 @@ const Register = () => {
   const { signUp, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [units, setUnits] = useState<Unit[]>([]);
+  const [filteredUnits, setFilteredUnits] = useState<Unit[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [formData, setFormData] = useState({
     nip: "",
     full_name: "",
     email: "",
     phone: "",
     unit_id: "",
+    unit_name: "",
     position: "",
     rank: "",
     join_date: "",
@@ -61,6 +63,33 @@ const Register = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleUnitInputChange = (value: string) => {
+    setFormData(prev => ({ ...prev, unit_name: value, unit_id: "" }));
+    
+    if (value.trim() === "") {
+      setFilteredUnits([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    const filtered = units.filter(unit => 
+      unit.name.toLowerCase().includes(value.toLowerCase()) ||
+      unit.code.toLowerCase().includes(value.toLowerCase())
+    );
+    
+    setFilteredUnits(filtered);
+    setShowSuggestions(true);
+  };
+
+  const handleSelectUnit = (unit: Unit) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      unit_name: unit.name,
+      unit_id: unit.id 
+    }));
+    setShowSuggestions(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
@@ -82,10 +111,10 @@ const Register = () => {
       return;
     }
 
-    if (!formData.unit_id) {
+    if (!formData.unit_name.trim()) {
       toast({
         title: "Error",
-        description: "Silakan pilih unit kerja",
+        description: "Unit kerja harus diisi",
         variant: "destructive"
       });
       return;
@@ -99,7 +128,7 @@ const Register = () => {
       email: formData.email,
       password: formData.password,
       phone: formData.phone,
-      unit_id: formData.unit_id,
+      unit_id: formData.unit_id || null,
       position: formData.position,
       rank: formData.rank,
       join_date: formData.join_date || undefined,
@@ -195,24 +224,40 @@ const Register = () => {
                 />
               </div>
 
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-2 md:col-span-2 relative">
                 <Label htmlFor="unit">Unit Kerja *</Label>
-                <Select 
-                  required 
-                  value={formData.unit_id}
-                  onValueChange={(value) => handleChange('unit_id', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih unit kerja" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {units.map((unit) => (
-                      <SelectItem key={unit.id} value={unit.id}>
-                        {unit.name}
-                      </SelectItem>
+                <Input
+                  id="unit"
+                  placeholder="Ketik untuk mencari unit kerja..."
+                  required
+                  value={formData.unit_name}
+                  onChange={(e) => handleUnitInputChange(e.target.value)}
+                  onFocus={() => {
+                    if (formData.unit_name && filteredUnits.length > 0) {
+                      setShowSuggestions(true);
+                    }
+                  }}
+                  autoComplete="off"
+                />
+                {showSuggestions && filteredUnits.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                    {filteredUnits.map((unit) => (
+                      <div
+                        key={unit.id}
+                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => handleSelectUnit(unit)}
+                      >
+                        <div className="font-medium">{unit.name}</div>
+                        <div className="text-sm text-gray-500">{unit.code}</div>
+                      </div>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </div>
+                )}
+                {formData.unit_name && !formData.unit_id && filteredUnits.length > 0 && (
+                  <p className="text-sm text-blue-600 mt-1">
+                    💡 Pilih dari daftar untuk auto-fill, atau lanjutkan dengan input manual
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
