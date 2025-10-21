@@ -1,46 +1,64 @@
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { 
-  Calendar, 
-  FileText, 
-  Clock, 
-  CheckCircle, 
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  Calendar,
+  FileText,
+  Clock,
+  CheckCircle,
   XCircle,
   LogOut,
   User,
-  Plus
+  Plus,
+  Shield
 } from "lucide-react";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { signOut, profile, isAdminPusat } = useAuth();
+  const [unitName, setUnitName] = useState("");
 
-  // Simulated user data - will be replaced with real data
-  const user = {
-    name: "John Doe",
-    nip: "198912345678901234",
-    unit: "Sekretariat Ditjen Binalavotas",
-    role: "User"
+  useEffect(() => {
+    if (profile?.unit_id) {
+      fetchUnitName();
+    }
+  }, [profile]);
+
+  const fetchUnitName = async () => {
+    if (!profile?.unit_id) return;
+    
+    const { data } = await supabase
+      .from('units')
+      .select('name')
+      .eq('id', profile.unit_id)
+      .single();
+    
+    if (data) {
+      setUnitName(data.name);
+    }
   };
 
   const stats = [
     {
       title: "Saldo Cuti Tahunan",
-      value: "10",
+      value: "12",
       subtitle: "dari 12 hari",
       icon: Calendar,
       color: "text-success"
     },
     {
       title: "Pengajuan Pending",
-      value: "2",
+      value: "0",
       subtitle: "menunggu persetujuan",
       icon: Clock,
       color: "text-warning"
     },
     {
       title: "Cuti Disetujui",
-      value: "3",
+      value: "0",
       subtitle: "tahun ini",
       icon: CheckCircle,
       color: "text-success"
@@ -51,25 +69,6 @@ const Dashboard = () => {
       subtitle: "tahun ini",
       icon: XCircle,
       color: "text-destructive"
-    }
-  ];
-
-  const recentLeaves = [
-    {
-      type: "Cuti Tahunan",
-      startDate: "20 Nov 2025",
-      endDate: "22 Nov 2025",
-      days: 2,
-      status: "Disetujui Pusat",
-      statusColor: "bg-success"
-    },
-    {
-      type: "Cuti Sakit",
-      startDate: "15 Okt 2025",
-      endDate: "16 Okt 2025",
-      days: 2,
-      status: "Diajukan",
-      statusColor: "bg-info"
     }
   ];
 
@@ -85,14 +84,14 @@ const Dashboard = () => {
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right hidden sm:block">
-                <p className="font-medium">{user.name}</p>
-                <p className="text-sm text-white/80">{user.nip}</p>
+                <p className="font-medium">{profile?.full_name}</p>
+                <p className="text-sm text-white/80">{profile?.nip}</p>
               </div>
               <Button
                 variant="ghost"
                 size="icon"
                 className="text-white hover:bg-white/10"
-                onClick={() => navigate("/")}
+                onClick={() => signOut().then(() => navigate("/"))}
               >
                 <LogOut className="h-5 w-5" />
               </Button>
@@ -111,15 +110,26 @@ const Dashboard = () => {
               </div>
               <div className="flex-1">
                 <h2 className="text-2xl font-bold text-foreground mb-2">
-                  Selamat Datang, {user.name}
+                  Selamat Datang, {profile?.full_name}
                 </h2>
-                <p className="text-muted-foreground mb-1">{user.unit}</p>
-                <p className="text-sm text-muted-foreground">Role: {user.role}</p>
+                <p className="text-muted-foreground mb-1">{unitName || "Loading unit..."}</p>
+                <p className="text-sm text-muted-foreground">{profile?.position} - {profile?.rank}</p>
               </div>
-              <Button className="bg-gradient-primary hover:opacity-90">
-                <Plus className="w-4 h-4 mr-2" />
-                Ajukan Cuti Baru
-              </Button>
+              <div className="flex flex-col gap-2">
+                {isAdminPusat() && (
+                  <Button 
+                    variant="outline"
+                    onClick={() => navigate("/admin-pusat")}
+                  >
+                    <Shield className="w-4 h-4 mr-2" />
+                    Admin Pusat
+                  </Button>
+                )}
+                <Button className="bg-gradient-primary hover:opacity-90">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Ajukan Cuti
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -144,7 +154,7 @@ const Dashboard = () => {
           ))}
         </div>
 
-        {/* Recent Leaves */}
+        {/* Recent Leaves - Empty State */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -155,30 +165,13 @@ const Dashboard = () => {
                 </CardTitle>
                 <CardDescription>Pengajuan cuti terbaru Anda</CardDescription>
               </div>
-              <Button variant="outline">Lihat Semua</Button>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {recentLeaves.map((leave, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-foreground mb-1">{leave.type}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {leave.startDate} - {leave.endDate} ({leave.days} hari)
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium text-white ${leave.statusColor}`}>
-                      {leave.status}
-                    </span>
-                    <Button variant="ghost" size="sm">Detail</Button>
-                  </div>
-                </div>
-              ))}
+            <div className="text-center py-12 text-muted-foreground">
+              <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>Belum ada pengajuan cuti</p>
+              <p className="text-sm">Mulai ajukan cuti untuk melihat riwayat di sini</p>
             </div>
           </CardContent>
         </Card>

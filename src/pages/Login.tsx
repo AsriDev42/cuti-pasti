@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,25 +6,42 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, LogIn } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { signIn, user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
+
+  useEffect(() => {
+    if (user) {
+      navigate("/dashboard");
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
 
-    // Simulate login - will be implemented with Lovable Cloud later
-    setTimeout(() => {
+    const { error } = await signIn(identifier, password);
+
+    setLoading(false);
+
+    if (error) {
+      toast({
+        title: "Login Gagal",
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
       toast({
         title: "Login Berhasil",
         description: "Selamat datang di SI CUTI",
       });
-      setLoading(false);
-      navigate("/dashboard");
-    }, 1500);
+    }
   };
 
   return (
@@ -52,11 +69,14 @@ const Login = () => {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="identifier">NIP atau Email</Label>
+              <Label htmlFor="identifier">Email</Label>
               <Input
                 id="identifier"
-                placeholder="Masukkan NIP atau email"
+                type="email"
+                placeholder="Masukkan email"
                 required
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
               />
             </div>
 
@@ -76,6 +96,8 @@ const Login = () => {
                 type="password"
                 placeholder="Masukkan password"
                 required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
               />
             </div>
 
@@ -92,6 +114,7 @@ const Login = () => {
               <Button
                 variant="link"
                 className="p-0 h-auto text-primary"
+                type="button"
                 onClick={() => navigate("/register")}
               >
                 Daftar di sini
