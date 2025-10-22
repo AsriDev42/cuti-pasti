@@ -115,31 +115,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const redirectUrl = `${window.location.origin}/`;
       
-      // First create auth user
+      // Create auth user with metadata - trigger will handle profile and role creation
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
           emailRedirectTo: redirectUrl,
+          data: {
+            nip: data.nip,
+            full_name: data.full_name,
+            phone: data.phone,
+            unit_id: data.unit_id,
+            position: data.position,
+            rank: data.rank,
+            join_date: data.join_date,
+            address: data.address
+          }
         }
       });
 
       if (authError) return { error: authError };
       if (!authData.user) return { error: new Error('User creation failed') };
 
-      // Profile is created automatically by trigger
-      // Just assign the default user role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: authData.user.id,
-          role: 'user'
-        });
-
-      if (roleError) {
-        console.error('Error assigning role:', roleError);
-      }
-
+      // Profile and role are created automatically by database trigger
       return { error: null };
     } catch (error) {
       return { error };

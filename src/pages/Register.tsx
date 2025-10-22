@@ -47,15 +47,23 @@ const Register = () => {
   }, [user, navigate]);
 
   const fetchUnits = async () => {
-    const { data, error } = await supabase
-      .from('units')
-      .select('*')
-      .order('name');
-    
-    if (error) {
-      console.error('Error fetching units:', error);
-    } else {
-      setUnits(data || []);
+    try {
+      const { data, error } = await supabase
+        .from('units')
+        .select('*')
+        .order('name');
+      
+      if (error) {
+        console.error('Error fetching units:', error);
+        // Don't show error to user, just keep units empty
+        setUnits([]);
+      } else {
+        setUnits(data || []);
+      }
+    } catch (err) {
+      console.error('Error in fetchUnits:', err);
+      // Silently fail - user can still input manually
+      setUnits([]);
     }
   };
 
