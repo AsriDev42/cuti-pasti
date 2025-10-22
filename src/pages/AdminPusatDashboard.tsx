@@ -16,7 +16,8 @@ import {
   Search,
   CheckCircle,
   XCircle,
-  Shield
+  Shield,
+  FileText
 } from "lucide-react";
 import {
   Table,
@@ -301,6 +302,14 @@ const AdminPusatDashboard = () => {
               <p className="text-white/80 text-sm">Manajemen User SI CUTI</p>
             </div>
             <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                className="text-white hover:bg-white/10 hidden md:flex"
+                onClick={() => navigate("/templates")}
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Kelola Template
+              </Button>
               <div className="text-right hidden sm:block">
                 <p className="font-medium">{profile?.full_name}</p>
                 <p className="text-sm text-white/80">Admin Pusat</p>

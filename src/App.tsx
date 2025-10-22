@@ -13,6 +13,7 @@ import LeaveApplication from "./pages/LeaveApplication";
 import PendingApproval from "./pages/PendingApproval";
 import Unauthorized from "./pages/Unauthorized";
 import AdminPusatDashboard from "./pages/AdminPusatDashboard";
+import TemplateManagement from "./pages/TemplateManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -59,6 +60,14 @@ const App = () => (
               element={
                 <ProtectedRoute requireActive>
                   <PendingApproval />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/templates" 
+              element={
+                <ProtectedRoute requireRole="admin_pusat" requireActive>
+                  <TemplateManagement />
                 </ProtectedRoute>
               } 
             />

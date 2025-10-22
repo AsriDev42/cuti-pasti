@@ -4,9 +4,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { FileText, Calendar, Clock } from 'lucide-react';
 import { format } from 'date-fns';
-import { id as localeId } from 'date-fns/locale';
+import { Calendar, Clock, FileText } from 'lucide-react';
+import { DocumentViewer } from './DocumentViewer';
 
 interface LeaveApplication {
   id: string;
@@ -25,6 +25,11 @@ export const LeaveHistory = () => {
   const { user } = useAuth();
   const [applications, setApplications] = useState<LeaveApplication[]>([]);
   const [loading, setLoading] = useState(true);
+  const [documentDialog, setDocumentDialog] = useState<{
+    open: boolean;
+    leaveId: string;
+    type: 'application_letter' | 'decision_letter';
+  }>({ open: false, leaveId: '', type: 'application_letter' });
 
   useEffect(() => {
     if (user) {
@@ -50,34 +55,18 @@ export const LeaveHistory = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { label: string; className: string }> = {
-      draft: { label: 'Draft', className: 'bg-muted text-muted-foreground' },
-      submitted: { label: 'Diajukan', className: 'bg-info text-white' },
-      approved_unit: { label: 'Disetujui Unit', className: 'bg-primary text-white' },
-      rejected_unit: { label: 'Ditolak Unit', className: 'bg-destructive text-white' },
-      approved_pusat: { label: 'Disetujui Pusat', className: 'bg-success text-white' },
-      rejected_pusat: { label: 'Ditolak Pusat', className: 'bg-destructive text-white' },
-      cancelled: { label: 'Dibatalkan', className: 'bg-muted text-muted-foreground' }
+    const variants: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
+      pending: "outline",
+      approved: "default",
+      rejected: "destructive"
     };
-
-    const config = statusConfig[status] || { label: status, className: 'bg-muted' };
-    return (
-      <Badge className={config.className}>
-        {config.label}
-      </Badge>
-    );
-  };
-
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'dd MMM yyyy', { locale: localeId });
+    return <Badge variant={variants[status] || "outline"}>{status.toUpperCase()}</Badge>;
   };
 
   if (loading) {
     return (
       <Card>
-        <CardContent className="p-6 text-center">
-          <div className="animate-pulse">Loading...</div>
-        </CardContent>
+        <CardContent className="p-6 text-center">Loading...</CardContent>
       </Card>
     );
   }
@@ -86,17 +75,13 @@ export const LeaveHistory = () => {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="w-5 h-5" />
-            Riwayat Pengajuan Cuti
-          </CardTitle>
+          <CardTitle>Riwayat Pengajuan Cuti</CardTitle>
           <CardDescription>Pengajuan cuti terbaru Anda</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-12 text-muted-foreground">
+          <div className="text-center py-8 text-muted-foreground">
             <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p>Belum ada pengajuan cuti</p>
-            <p className="text-sm">Mulai ajukan cuti untuk melihat riwayat di sini</p>
           </div>
         </CardContent>
       </Card>
@@ -104,60 +89,85 @@ export const LeaveHistory = () => {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5" />
-              Riwayat Pengajuan Cuti
-            </CardTitle>
-            <CardDescription>Pengajuan cuti terbaru Anda</CardDescription>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Riwayat Pengajuan Cuti</CardTitle>
+          <CardDescription>Pengajuan cuti terbaru Anda</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {applications.map((app) => (
+              <Card key={app.id} className="border-2">
+                <CardContent className="p-4">
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between">
+                      <h3 className="font-semibold">{app.leave_type.name}</h3>
+                      {getStatusBadge(app.status)}
+                    </div>
+                    
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        <span>
+                          {format(new Date(app.start_date), 'dd MMM yyyy')} - {format(new Date(app.end_date), 'dd MMM yyyy')}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-4 h-4" />
+                        <span>{app.total_days} hari</span>
+                      </div>
+                    </div>
+
+                    <p className="text-sm text-muted-foreground line-clamp-2">{app.reason}</p>
+
+                    <div className="flex justify-between items-center pt-2 border-t">
+                      <span className="text-xs text-muted-foreground">
+                        Diajukan: {format(new Date(app.created_at), 'dd MMM yyyy')}
+                      </span>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setDocumentDialog({
+                            open: true,
+                            leaveId: app.id,
+                            type: 'application_letter'
+                          })}
+                        >
+                          <FileText className="w-3 h-3 mr-1" />
+                          Surat Pengajuan
+                        </Button>
+                        {app.status === 'approved' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setDocumentDialog({
+                              open: true,
+                              leaveId: app.id,
+                              type: 'decision_letter'
+                            })}
+                          >
+                            <FileText className="w-3 h-3 mr-1" />
+                            SK Cuti
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {applications.map((application) => (
-            <div
-              key={application.id}
-              className="flex items-start justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-            >
-              <div className="flex-1 space-y-2">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-foreground">
-                    {application.leave_type.name}
-                  </h3>
-                  {getStatusBadge(application.status)}
-                </div>
-                
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="w-4 h-4" />
-                    <span>
-                      {formatDate(application.start_date)} - {formatDate(application.end_date)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    <span>{application.total_days} hari</span>
-                  </div>
-                </div>
+        </CardContent>
+      </Card>
 
-                <p className="text-sm text-muted-foreground line-clamp-2">
-                  {application.reason}
-                </p>
-              </div>
-
-              <div className="ml-4">
-                <Button variant="ghost" size="sm">
-                  Detail
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+      <DocumentViewer
+        leaveApplicationId={documentDialog.leaveId}
+        documentType={documentDialog.type}
+        open={documentDialog.open}
+        onOpenChange={(open) => setDocumentDialog({ ...documentDialog, open })}
+      />
+    </>
   );
 };
