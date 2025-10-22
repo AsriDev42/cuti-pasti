@@ -11,12 +11,11 @@ interface Profile {
   email: string;
   phone: string;
   unit_id: string | null;
-  jabatan: string;
-  pangkat_golongan: string;
-  joined_date: string | null;
+  position: string;
+  rank: string;
+  join_date: string | null;
   address: string | null;
-  photo_url: string | null;
-  role: 'user' | 'admin_unit' | 'admin_pusat';
+  avatar_url: string | null;
   status: 'pending_approval' | 'active' | 'inactive' | 'rejected';
   rejection_reason: string | null;
 }
@@ -29,9 +28,9 @@ interface AuthContextType {
   signUp: (data: SignUpData) => Promise<{ error: any }>;
   signIn: (identifier: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
-  hasRole: (role: 'user' | 'admin_unit' | 'admin_pusat') => boolean;
-  isAdminPusat: () => boolean;
-  isAdminUnit: () => boolean;
+  hasRole: (role: 'user' | 'admin_unit' | 'admin_pusat') => Promise<boolean>;
+  isAdminPusat: () => Promise<boolean>;
+  isAdminUnit: () => Promise<boolean>;
   refreshProfile: () => Promise<void>;
 }
 
@@ -128,28 +127,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (authError) return { error: authError };
       if (!authData.user) return { error: new Error('User creation failed') };
 
-      // Then create profile
-      const { error: profileError } = await supabase
-        .from('profiles')
+      // Profile is created automatically by trigger
+      // Just assign the default user role
+      const { error: roleError } = await supabase
+        .from('user_roles')
         .insert({
-          id: authData.user.id,
-          nip: data.nip,
-          full_name: data.full_name,
-          email: data.email,
-          phone: data.phone,
-          unit_id: data.unit_id,
-          jabatan: data.position,
-          pangkat_golongan: data.rank,
-          joined_date: data.join_date || null,
-          address: data.address || null,
-          role: 'user',
-          status: 'pending_approval'
+          user_id: authData.user.id,
+          role: 'user'
         });
 
-      if (profileError) {
-        // If profile creation fails, delete the auth user
-        await supabase.auth.admin.deleteUser(authData.user.id);
-        return { error: profileError };
+      if (roleError) {
+        console.error('Error assigning role:', roleError);
       }
 
       return { error: null };
@@ -200,12 +188,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const hasRole = (role: 'user' | 'admin_unit' | 'admin_pusat'): boolean => {
-    return profile?.role === role;
+  const hasRole = async (role: 'user' | 'admin_unit' | 'admin_pusat'): Promise<boolean> => {
+    if (!user) return false;
+    const { data } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', role)
+      .maybeSingle();
+    return !!data;
   };
 
-  const isAdminPusat = (): boolean => hasRole('admin_pusat');
-  const isAdminUnit = (): boolean => hasRole('admin_unit');
+  const isAdminPusat = async (): Promise<boolean> => await hasRole('admin_pusat');
+  const isAdminUnit = async (): Promise<boolean> => await hasRole('admin_unit');
 
   const refreshProfile = async () => {
     if (user) {

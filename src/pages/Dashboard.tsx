@@ -10,19 +10,30 @@ import {
   LogOut,
   User,
   Plus,
-  Shield
+  Shield,
+  ClipboardCheck
 } from "lucide-react";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { signOut, profile, isAdminPusat } = useAuth();
+  const { signOut, profile, isAdminPusat, isAdminUnit } = useAuth();
   const [unitName, setUnitName] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isUnitAdmin, setIsUnitAdmin] = useState(false);
 
   useEffect(() => {
     if (profile?.unit_id) {
       fetchUnitName();
     }
+    checkAdminStatus();
   }, [profile]);
+
+  const checkAdminStatus = async () => {
+    const adminPusatStatus = await isAdminPusat();
+    const adminUnitStatus = await isAdminUnit();
+    setIsAdmin(adminPusatStatus);
+    setIsUnitAdmin(adminUnitStatus);
+  };
 
   const fetchUnitName = async () => {
     if (!profile?.unit_id) return;
@@ -92,7 +103,16 @@ const Dashboard = () => {
                 <p className="text-sm text-muted-foreground">{profile?.position} - {profile?.rank}</p>
               </div>
               <div className="flex flex-col gap-2">
-                {isAdminPusat() && (
+                {(isAdmin || isUnitAdmin) && (
+                  <Button 
+                    variant="outline"
+                    onClick={() => navigate("/approvals")}
+                  >
+                    <ClipboardCheck className="w-4 h-4 mr-2" />
+                    Persetujuan Cuti
+                  </Button>
+                )}
+                {isAdmin && (
                   <Button 
                     variant="outline"
                     onClick={() => navigate("/admin-pusat")}
