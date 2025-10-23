@@ -50,12 +50,19 @@ export const ProtectedRoute = ({
     return <Navigate to="/login" replace />;
   }
 
-  if (!profile) {
+  // Only redirect to pending-approval if explicitly accessing that route or if status is pending
+  if (!profile || (profile.status === 'pending_approval' && requireActive)) {
     return <Navigate to="/pending-approval" replace />;
   }
 
-  if (requireActive && profile.status !== 'active') {
-    return <Navigate to="/pending-approval" replace />;
+  // If user status is rejected, show unauthorized
+  if (profile.status === 'rejected') {
+    return <Navigate to="/unauthorized" replace />;
+  }
+
+  // If requireActive is true but user is not active (and not pending), redirect to unauthorized
+  if (requireActive && profile.status !== 'active' && profile.status !== 'pending_approval') {
+    return <Navigate to="/unauthorized" replace />;
   }
 
   if (requireRole && !hasRequiredRole) {

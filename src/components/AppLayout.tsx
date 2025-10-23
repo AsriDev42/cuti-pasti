@@ -117,12 +117,6 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
       url: "/templates",
       show: isAdmin || isUnitAdmin,
     },
-    {
-      title: "Manajemen User",
-      icon: Users,
-      url: "/users",
-      show: isAdmin,
-    },
   ];
 
   return (

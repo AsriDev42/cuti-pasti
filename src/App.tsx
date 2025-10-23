@@ -100,19 +100,6 @@ const App = () => (
               }
             />
             <Route
-              path="/users"
-              element={
-                <ProtectedRoute requireRole="admin_pusat" requireActive>
-                  <AppLayout>
-                    <div className="text-center py-12">
-                      <h2 className="text-2xl font-bold mb-2">Manajemen User</h2>
-                      <p className="text-muted-foreground">Halaman ini akan segera tersedia</p>
-                    </div>
-                  </AppLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/profile"
               element={
                 <ProtectedRoute requireActive>
@@ -129,9 +116,7 @@ const App = () => (
               path="/pending-approval"
               element={
                 <ProtectedRoute>
-                  <AppLayout>
-                    <PendingApproval />
-                  </AppLayout>
+                  <PendingApproval />
                 </ProtectedRoute>
               }
             />

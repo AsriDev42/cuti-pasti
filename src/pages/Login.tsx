@@ -11,16 +11,17 @@ import { useAuth } from "@/contexts/AuthContext";
 const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { signIn, user } = useAuth();
+  const { signIn, user, profile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
 
   useEffect(() => {
-    if (user) {
-      navigate("/dashboard");
+    if (user && profile) {
+      // Always redirect to dashboard after successful login
+      navigate('/dashboard');
     }
-  }, [user, navigate]);
+  }, [user, profile, navigate]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
