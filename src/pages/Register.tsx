@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, UserPlus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,15 +23,12 @@ const Register = () => {
   const { signUp, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [units, setUnits] = useState<Unit[]>([]);
-  const [filteredUnits, setFilteredUnits] = useState<Unit[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const [formData, setFormData] = useState({
     nip: "",
     full_name: "",
     email: "",
     phone: "",
     unit_id: "",
-    unit_name: "",
     position: "",
     rank: "",
     join_date: "",
@@ -71,31 +69,8 @@ const Register = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleUnitInputChange = (value: string) => {
-    setFormData(prev => ({ ...prev, unit_name: value, unit_id: "" }));
-    
-    if (value.trim() === "") {
-      setFilteredUnits([]);
-      setShowSuggestions(false);
-      return;
-    }
-
-    const filtered = units.filter(unit => 
-      unit.name.toLowerCase().includes(value.toLowerCase()) ||
-      unit.code.toLowerCase().includes(value.toLowerCase())
-    );
-    
-    setFilteredUnits(filtered);
-    setShowSuggestions(true);
-  };
-
-  const handleSelectUnit = (unit: Unit) => {
-    setFormData(prev => ({ 
-      ...prev, 
-      unit_name: unit.name,
-      unit_id: unit.id 
-    }));
-    setShowSuggestions(false);
+  const handleUnitChange = (unitId: string) => {
+    setFormData(prev => ({ ...prev, unit_id: unitId }));
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -119,10 +94,10 @@ const Register = () => {
       return;
     }
 
-    if (!formData.unit_name.trim()) {
+    if (!formData.unit_id) {
       toast({
         title: "Error",
-        description: "Unit kerja harus diisi",
+        description: "Unit kerja harus dipilih",
         variant: "destructive"
       });
       return;
@@ -136,7 +111,7 @@ const Register = () => {
       email: formData.email,
       password: formData.password,
       phone: formData.phone,
-      unit_id: formData.unit_id || null,
+      unit_id: formData.unit_id,
       position: formData.position,
       rank: formData.rank,
       join_date: formData.join_date || undefined,
@@ -232,40 +207,27 @@ const Register = () => {
                 />
               </div>
 
-              <div className="space-y-2 md:col-span-2 relative">
+              <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="unit">Unit Kerja *</Label>
-                <Input
-                  id="unit"
-                  placeholder="Ketik untuk mencari unit kerja..."
+                <Select 
+                  value={formData.unit_id} 
+                  onValueChange={handleUnitChange}
                   required
-                  value={formData.unit_name}
-                  onChange={(e) => handleUnitInputChange(e.target.value)}
-                  onFocus={() => {
-                    if (formData.unit_name && filteredUnits.length > 0) {
-                      setShowSuggestions(true);
-                    }
-                  }}
-                  autoComplete="off"
-                />
-                {showSuggestions && filteredUnits.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
-                    {filteredUnits.map((unit) => (
-                      <div
-                        key={unit.id}
-                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                        onClick={() => handleSelectUnit(unit)}
-                      >
-                        <div className="font-medium">{unit.name}</div>
-                        <div className="text-sm text-gray-500">{unit.code}</div>
-                      </div>
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Pilih unit kerja Anda" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px] bg-background">
+                    {units.map((unit) => (
+                      <SelectItem key={unit.id} value={unit.id}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{unit.name}</span>
+                          <span className="text-xs text-muted-foreground">{unit.code}</span>
+                        </div>
+                      </SelectItem>
                     ))}
-                  </div>
-                )}
-                {formData.unit_name && !formData.unit_id && filteredUnits.length > 0 && (
-                  <p className="text-sm text-blue-600 mt-1">
-                    💡 Pilih dari daftar untuk auto-fill, atau lanjutkan dengan input manual
-                  </p>
-                )}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
