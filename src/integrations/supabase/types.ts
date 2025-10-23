@@ -95,7 +95,7 @@ export type Database = {
           rank: string
           rejection_reason: string | null
           status: Database["public"]["Enums"]["user_status"] | null
-          unit_id: string | null
+          unit_id: string
           updated_at: string | null
         }
         Insert: {
@@ -112,7 +112,7 @@ export type Database = {
           rank: string
           rejection_reason?: string | null
           status?: Database["public"]["Enums"]["user_status"] | null
-          unit_id?: string | null
+          unit_id: string
           updated_at?: string | null
         }
         Update: {
@@ -129,10 +129,17 @@ export type Database = {
           rank?: string
           rejection_reason?: string | null
           status?: Database["public"]["Enums"]["user_status"] | null
-          unit_id?: string | null
+          unit_id?: string
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_profiles_unit_id"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_unit_id_fkey"
             columns: ["unit_id"]

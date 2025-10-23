@@ -157,7 +157,7 @@ const AdminPusatDashboard = () => {
       .from('profiles')
       .select(`
         *,
-        unit:units(name)
+        unit:units!unit_id(name)
       `)
       .order('created_at', { ascending: false });
 
