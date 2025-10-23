@@ -129,7 +129,9 @@ const App = () => (
               path="/pending-approval"
               element={
                 <ProtectedRoute>
-                  <PendingApproval />
+                  <AppLayout>
+                    <PendingApproval />
+                  </AppLayout>
                 </ProtectedRoute>
               }
             />
