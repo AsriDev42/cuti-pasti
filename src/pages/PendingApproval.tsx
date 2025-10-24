@@ -18,8 +18,13 @@ interface LeaveApplicationWithUser {
   end_date: string;
   total_days: number;
   reason: string;
+  leave_address: string;
+  contact_phone: string;
+  document_links: string[];
   status: string;
   created_at: string;
+  unit_admin_notes: string | null;
+  pusat_admin_notes: string | null;
   profile: {
     full_name: string;
     nip: string;
@@ -29,12 +34,6 @@ interface LeaveApplicationWithUser {
   leave_type: {
     name: string;
   };
-  approvals: Array<{
-    id: string;
-    approver_level: number;
-    status: string;
-    comments: string | null;
-  }>;
 }
 
 const PendingApproval = () => {
@@ -42,7 +41,7 @@ const PendingApproval = () => {
   const navigate = useNavigate();
   const [applications, setApplications] = useState<LeaveApplicationWithUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [comments, setComments] = useState<{ [key: string]: string }>({});
+  const [notes, setNotes] = useState<{ [key: string]: string }>({});
   const [isAdminUnit, setIsAdminUnit] = useState(false);
   const [isAdminPusat, setIsAdminPusat] = useState(false);
 
@@ -66,63 +65,134 @@ const PendingApproval = () => {
   const fetchPendingApplications = async () => {
     if (!profile) return;
 
-    const { data, error } = await supabase
-      .from('leave_applications' as any)
-      .select(`
-        *,
-        profile:profiles!leave_applications_user_id_fkey(full_name, nip, position, unit_id),
-        leave_type:leave_types(name),
-        approvals:leave_approvals(id, approver_level, status, comments)
-      `)
-      .eq('approvals.approver_id', profile.id)
-      .eq('approvals.status', 'pending')
-      .order('created_at', { ascending: false });
+    try {
+      let query = supabase
+        .from('leave_applications')
+        .select('*');
 
-    if (error) {
+      // Admin Unit melihat pengajuan yang baru submitted dari unit mereka
+      if (isAdminUnit && !isAdminPusat) {
+        query = query.eq('status', 'submitted');
+      }
+      // Admin Pusat melihat pengajuan yang sudah disetujui Admin Unit atau baru submitted
+      else if (isAdminPusat) {
+        query = query.in('status', ['approved_unit', 'submitted']);
+      }
+
+      const { data: applications, error: appsError } = await query.order('created_at', { ascending: false });
+
+      if (appsError) throw appsError;
+
+      if (!applications || applications.length === 0) {
+        setApplications([]);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch profiles untuk setiap application
+      const userIds = [...new Set(applications.map(app => app.user_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, nip, position, unit_id')
+        .in('id', userIds);
+
+      // Fetch leave types
+      const leaveTypeIds = [...new Set(applications.map(app => app.leave_type_id))];
+      const { data: leaveTypes } = await supabase
+        .from('leave_types')
+        .select('id, name')
+        .in('id', leaveTypeIds);
+
+      // Combine data
+      const enrichedApplications = applications.map(app => {
+        const profile = profiles?.find(p => p.id === app.user_id);
+        const leaveType = leaveTypes?.find(lt => lt.id === app.leave_type_id);
+        
+        return {
+          ...app,
+          profile: profile || { full_name: '', nip: '', position: '', unit_id: '' },
+          leave_type: leaveType || { name: '' }
+        };
+      });
+
+      // Filter by unit for Admin Unit
+      const filteredApplications = isAdminUnit && !isAdminPusat
+        ? enrichedApplications.filter(app => app.profile.unit_id === profile.unit_id)
+        : enrichedApplications;
+
+      setApplications(filteredApplications as LeaveApplicationWithUser[]);
+    } catch (error) {
       console.error('Error fetching applications:', error);
       toast({
         title: "Error",
         description: "Gagal memuat data pengajuan cuti",
         variant: "destructive"
       });
-    } else {
-      setApplications(data as any);
     }
     setLoading(false);
   };
 
-  const handleApproval = async (applicationId: string, approvalId: string, newStatus: 'approved' | 'rejected') => {
-    const { error } = await supabase
-      .from('leave_approvals' as any)
-      .update({
-        status: newStatus as any,
-        comments: comments[approvalId] || null,
-        approved_at: new Date().toISOString()
-      })
-      .eq('id', approvalId);
+  const handleApproval = async (applicationId: string, action: 'approve' | 'reject') => {
+    try {
+      let newStatus: string;
+      let noteField: string;
+      
+      // Tentukan status baru berdasarkan role dan action
+      if (isAdminUnit && !isAdminPusat) {
+        newStatus = action === 'approve' ? 'approved_unit' : 'rejected_unit';
+        noteField = 'unit_admin_notes';
+      } else if (isAdminPusat) {
+        newStatus = action === 'approve' ? 'approved_pusat' : 'rejected_pusat';
+        noteField = 'pusat_admin_notes';
+      } else {
+        return;
+      }
 
-    if (error) {
+      const updateData: any = {
+        status: newStatus,
+        [`reviewed_by_${isAdminPusat ? 'pusat' : 'unit'}`]: profile?.id,
+        [`reviewed_at_${isAdminPusat ? 'pusat' : 'unit'}`]: new Date().toISOString()
+      };
+
+      if (notes[applicationId]) {
+        updateData[noteField] = notes[applicationId];
+      }
+
+      const { error } = await supabase
+        .from('leave_applications')
+        .update(updateData)
+        .eq('id', applicationId);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Berhasil",
+        description: `Pengajuan cuti ${action === 'approve' ? 'disetujui' : 'ditolak'}`,
+      });
+      
+      fetchPendingApplications();
+    } catch (error) {
+      console.error('Error:', error);
       toast({
         title: "Error",
         description: "Gagal memproses persetujuan",
         variant: "destructive"
       });
-    } else {
-      toast({
-        title: "Berhasil",
-        description: `Pengajuan cuti ${newStatus === 'approved' ? 'disetujui' : 'ditolak'}`,
-      });
-      fetchPendingApplications();
     }
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
-      pending: "outline",
-      approved: "default",
-      rejected: "destructive"
+    const statusConfig: { [key: string]: { variant: "default" | "secondary" | "destructive" | "outline", label: string } } = {
+      submitted: { variant: "outline", label: "Menunggu" },
+      approved_unit: { variant: "secondary", label: "Disetujui Unit" },
+      approved_pusat: { variant: "default", label: "Disetujui" },
+      rejected_unit: { variant: "destructive", label: "Ditolak Unit" },
+      rejected_pusat: { variant: "destructive", label: "Ditolak Pusat" }
     };
-    return <Badge variant={variants[status]}>{status.toUpperCase()}</Badge>;
+    const config = statusConfig[status] || { variant: "outline" as const, label: status };
+    return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
   if (!isAdminUnit && !isAdminPusat) {
@@ -160,7 +230,10 @@ const PendingApproval = () => {
         ) : (
           <div className="space-y-6">
             {applications.map((app) => {
-              const myApproval = app.approvals.find(a => a.status === 'pending');
+              const canApprove = 
+                (isAdminUnit && !isAdminPusat && app.status === 'submitted') ||
+                (isAdminPusat && app.status === 'approved_unit');
+              
               return (
                 <Card key={app.id} className="border-2">
                   <CardHeader>
@@ -202,27 +275,76 @@ const PendingApproval = () => {
                       <p className="text-foreground bg-muted/50 p-3 rounded-lg">{app.reason}</p>
                     </div>
 
-                    {myApproval && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm font-semibold text-muted-foreground">Alamat Selama Cuti</p>
+                        <p className="text-foreground">{app.leave_address}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-muted-foreground">No. Telepon</p>
+                        <p className="text-foreground">{app.contact_phone}</p>
+                      </div>
+                    </div>
+
+                    {app.document_links && app.document_links.length > 0 && (
+                      <div>
+                        <p className="text-sm font-semibold text-muted-foreground mb-2">Dokumen Pendukung</p>
+                        <div className="space-y-1">
+                          {app.document_links.map((link, idx) => (
+                            <a
+                              key={idx}
+                              href={link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-primary hover:underline block"
+                            >
+                              Dokumen {idx + 1}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {(app.unit_admin_notes || app.pusat_admin_notes) && (
+                      <div className="border-t pt-4">
+                        {app.unit_admin_notes && (
+                          <div className="mb-2">
+                            <p className="text-sm font-semibold text-muted-foreground">Catatan Admin Unit</p>
+                            <p className="text-sm text-foreground">{app.unit_admin_notes}</p>
+                          </div>
+                        )}
+                        {app.pusat_admin_notes && (
+                          <div>
+                            <p className="text-sm font-semibold text-muted-foreground">Catatan Admin Pusat</p>
+                            <p className="text-sm text-foreground">{app.pusat_admin_notes}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {canApprove && (
                       <div className="border-t pt-4 space-y-3">
                         <div>
-                          <label className="text-sm font-semibold text-muted-foreground">Komentar (opsional)</label>
+                          <label className="text-sm font-semibold text-muted-foreground">
+                            Catatan {isAdminPusat ? 'Admin Pusat' : 'Admin Unit'} (opsional)
+                          </label>
                           <Textarea
-                            placeholder="Tambahkan komentar..."
-                            value={comments[myApproval.id] || ''}
-                            onChange={(e) => setComments({ ...comments, [myApproval.id]: e.target.value })}
+                            placeholder="Tambahkan catatan..."
+                            value={notes[app.id] || ''}
+                            onChange={(e) => setNotes({ ...notes, [app.id]: e.target.value })}
                             className="mt-1"
                           />
                         </div>
                         <div className="flex gap-3">
                           <Button
-                            onClick={() => handleApproval(app.id, myApproval.id, 'approved')}
+                            onClick={() => handleApproval(app.id, 'approve')}
                             className="flex-1 bg-success hover:bg-success/90"
                           >
                             <CheckCircle className="w-4 h-4 mr-2" />
                             Setujui
                           </Button>
                           <Button
-                            onClick={() => handleApproval(app.id, myApproval.id, 'rejected')}
+                            onClick={() => handleApproval(app.id, 'reject')}
                             variant="destructive"
                             className="flex-1"
                           >
