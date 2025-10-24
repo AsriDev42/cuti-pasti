@@ -47,6 +47,124 @@ export type Database = {
         }
         Relationships: []
       }
+      leave_applications: {
+        Row: {
+          contact_phone: string
+          created_at: string
+          document_links: string[] | null
+          end_date: string
+          id: string
+          leave_address: string
+          leave_type_id: string
+          pusat_admin_notes: string | null
+          reason: string
+          reviewed_at_pusat: string | null
+          reviewed_at_unit: string | null
+          reviewed_by_pusat: string | null
+          reviewed_by_unit: string | null
+          start_date: string
+          status: string
+          total_days: number
+          unit_admin_notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          contact_phone: string
+          created_at?: string
+          document_links?: string[] | null
+          end_date: string
+          id?: string
+          leave_address: string
+          leave_type_id: string
+          pusat_admin_notes?: string | null
+          reason: string
+          reviewed_at_pusat?: string | null
+          reviewed_at_unit?: string | null
+          reviewed_by_pusat?: string | null
+          reviewed_by_unit?: string | null
+          start_date: string
+          status?: string
+          total_days: number
+          unit_admin_notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          contact_phone?: string
+          created_at?: string
+          document_links?: string[] | null
+          end_date?: string
+          id?: string
+          leave_address?: string
+          leave_type_id?: string
+          pusat_admin_notes?: string | null
+          reason?: string
+          reviewed_at_pusat?: string | null
+          reviewed_at_unit?: string | null
+          reviewed_by_pusat?: string | null
+          reviewed_by_unit?: string | null
+          start_date?: string
+          status?: string
+          total_days?: number
+          unit_admin_notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_applications_leave_type_id_fkey"
+            columns: ["leave_type_id"]
+            isOneToOne: false
+            referencedRelation: "leave_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leave_balances: {
+        Row: {
+          created_at: string
+          id: string
+          leave_type_id: string
+          remaining: number
+          total_quota: number
+          updated_at: string
+          used: number
+          user_id: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          leave_type_id: string
+          remaining: number
+          total_quota: number
+          updated_at?: string
+          used?: number
+          user_id: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          leave_type_id?: string
+          remaining?: number
+          total_quota?: number
+          updated_at?: string
+          used?: number
+          user_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_balances_leave_type_id_fkey"
+            columns: ["leave_type_id"]
+            isOneToOne: false
+            referencedRelation: "leave_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leave_types: {
         Row: {
           code: string

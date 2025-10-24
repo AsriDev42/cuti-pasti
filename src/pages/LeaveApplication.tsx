@@ -18,8 +18,7 @@ interface LeaveType {
   name: string;
   code: string;
   description: string;
-  max_days_per_request: number;
-  min_notice_days: number;
+  default_quota: number;
   requires_document: boolean;
 }
 
@@ -62,25 +61,24 @@ const LeaveApplication = () => {
 
   const fetchLeaveTypes = async () => {
     const { data } = await supabase
-      .from('leave_types' as any)
+      .from('leave_types')
       .select('*')
-      .eq('is_active', true)
       .order('name');
     
-    setLeaveTypes((data as any) || []);
+    setLeaveTypes((data as LeaveType[]) || []);
   };
 
   const fetchBalance = async (leaveTypeId: string) => {
     const currentYear = new Date().getFullYear();
     const { data } = await supabase
-      .from('leave_balances' as any)
+      .from('leave_balances')
       .select('remaining')
       .eq('user_id', user?.id)
       .eq('leave_type_id', leaveTypeId)
       .eq('year', currentYear)
       .maybeSingle();
     
-    setBalance(data as any);
+    setBalance(data as LeaveBalance | null);
   };
 
   const handleChange = (field: string, value: string) => {
@@ -149,38 +147,6 @@ const LeaveApplication = () => {
       return false;
     }
 
-    if (selectedLeaveType?.min_notice_days) {
-      const minNoticeDate = new Date(today);
-      minNoticeDate.setDate(minNoticeDate.getDate() + selectedLeaveType.min_notice_days);
-      
-      if (start < minNoticeDate) {
-        toast({
-          title: "Error",
-          description: `Cuti harus diajukan minimal ${selectedLeaveType.min_notice_days} hari sebelumnya`,
-          variant: "destructive"
-        });
-        return false;
-      }
-    }
-
-    if (selectedLeaveType?.max_days_per_request && workingDays > selectedLeaveType.max_days_per_request) {
-      toast({
-        title: "Error",
-        description: `Maksimal ${selectedLeaveType.max_days_per_request} hari per pengajuan`,
-        variant: "destructive"
-      });
-      return false;
-    }
-
-    if (balance && workingDays > balance.remaining) {
-      toast({
-        title: "Error",
-        description: `Saldo cuti tidak mencukupi. Sisa: ${balance.remaining} hari`,
-        variant: "destructive"
-      });
-      return false;
-    }
-
     if (!formData.reason.trim()) {
       toast({
         title: "Error",
@@ -231,7 +197,7 @@ const LeaveApplication = () => {
     const validLinks = formData.document_links.filter(link => link.trim());
     
     const { error } = await supabase
-      .from('leave_applications' as any)
+      .from('leave_applications')
       .insert([{
         user_id: user?.id,
         leave_type_id: formData.leave_type_id,
