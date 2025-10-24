@@ -14,6 +14,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import LeaveApplication from "./pages/LeaveApplication";
 import PendingApproval from "./pages/PendingApproval";
+import WaitingApproval from "./pages/WaitingApproval";
 import AdminPusatDashboard from "./pages/AdminPusatDashboard";
 import TemplateManagement from "./pages/TemplateManagement";
 import Unauthorized from "./pages/Unauthorized";
@@ -116,7 +117,7 @@ const App = () => (
               path="/pending-approval"
               element={
                 <ProtectedRoute>
-                  <PendingApproval />
+                  <WaitingApproval />
                 </ProtectedRoute>
               }
             />

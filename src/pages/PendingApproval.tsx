@@ -125,25 +125,20 @@ const PendingApproval = () => {
     return <Badge variant={variants[status]}>{status.toUpperCase()}</Badge>;
   };
 
-  if (profile?.status === 'pending_approval') {
+  if (!isAdminUnit && !isAdminPusat) {
     return (
       <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
         <Card className="max-w-md w-full">
           <CardHeader>
-            <CardTitle>Menunggu Persetujuan</CardTitle>
+            <CardTitle>Akses Ditolak</CardTitle>
             <CardDescription>
-              Akun Anda sedang dalam proses verifikasi
+              Halaman ini hanya untuk admin
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="p-4 bg-warning/10 border border-warning/20 rounded-lg">
-              <p className="text-sm text-foreground">
-                <strong>Status:</strong> {profile?.status}
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Silakan tunggu hingga admin memverifikasi akun Anda.
-              </p>
-            </div>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Anda tidak memiliki akses untuk melihat halaman persetujuan cuti.
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -151,33 +146,7 @@ const PendingApproval = () => {
   }
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      <header className="bg-gradient-primary text-white shadow-lg">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">Persetujuan Cuti</h1>
-              <p className="text-white/80 text-sm">Kelola pengajuan cuti yang memerlukan persetujuan</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right hidden sm:block">
-                <p className="font-medium">{profile?.full_name}</p>
-                <p className="text-sm text-white/80">{isAdminPusat ? 'Admin Pusat' : 'Admin Unit'}</p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-white hover:bg-white/10"
-                onClick={() => signOut().then(() => navigate("/"))}
-              >
-                <LogOut className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="container mx-auto px-4 py-8">
+    <div className="space-y-6">
         {loading ? (
           <div className="text-center py-8">Loading...</div>
         ) : applications.length === 0 ? (
@@ -269,7 +238,6 @@ const PendingApproval = () => {
             })}
           </div>
         )}
-      </div>
     </div>
   );
 };
