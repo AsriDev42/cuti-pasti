@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import { useLeaveBalance } from "@/hooks/useLeaveBalance";
 import { LogOut, CheckCircle, XCircle, Calendar, User } from "lucide-react";
 import { format } from "date-fns";
 
@@ -39,6 +40,7 @@ interface LeaveApplicationWithUser {
 const PendingApproval = () => {
   const { profile, signOut, hasRole } = useAuth();
   const navigate = useNavigate();
+  const { updateLeaveBalance } = useLeaveBalance();
   const [applications, setApplications] = useState<LeaveApplicationWithUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState<{ [key: string]: string }>({});
@@ -134,6 +136,12 @@ const PendingApproval = () => {
 
   const handleApproval = async (applicationId: string, action: 'approve' | 'reject') => {
     try {
+      // Find the application to get user_id, leave_type_id, and total_days
+      const application = applications.find(app => app.id === applicationId);
+      if (!application) {
+        throw new Error('Application not found');
+      }
+
       let newStatus: string;
       let noteField: string;
       
@@ -144,6 +152,25 @@ const PendingApproval = () => {
       } else if (isAdminPusat) {
         newStatus = action === 'approve' ? 'approved_pusat' : 'rejected_pusat';
         noteField = 'pusat_admin_notes';
+        
+        // Update leave balance when admin pusat approves
+        if (action === 'approve') {
+          const balanceResult = await updateLeaveBalance(
+            application.user_id,
+            application.leave_type_id,
+            application.total_days,
+            'deduct'
+          );
+          
+          if (!balanceResult.success) {
+            toast({
+              title: "Error",
+              description: balanceResult.error?.message || "Gagal mengupdate saldo cuti",
+              variant: "destructive"
+            });
+            return;
+          }
+        }
       } else {
         return;
       }
@@ -169,7 +196,7 @@ const PendingApproval = () => {
 
       toast({
         title: "Berhasil",
-        description: `Pengajuan cuti ${action === 'approve' ? 'disetujui' : 'ditolak'}`,
+        description: `Pengajuan cuti ${action === 'approve' ? 'disetujui' : 'ditolak'}${action === 'approve' && isAdminPusat ? ', saldo cuti telah dikurangi' : ''}`,
       });
       
       fetchPendingApplications();

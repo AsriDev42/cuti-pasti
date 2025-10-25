@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { Calendar, Clock, FileText } from 'lucide-react';
 import { DocumentViewer } from './DocumentViewer';
+import { CancelLeaveButton } from './CancelLeaveButton';
 
 interface LeaveApplication {
   id: string;
@@ -55,12 +56,26 @@ export const LeaveHistory = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
-      pending: "outline",
-      approved: "default",
-      rejected: "destructive"
+    const statusConfig: { 
+      [key: string]: { 
+        variant: "default" | "secondary" | "destructive" | "outline";
+        label: string;
+        color: string;
+      } 
+    } = {
+      submitted: { variant: "outline", label: "Menunggu", color: "bg-yellow-500" },
+      approved_unit: { variant: "secondary", label: "Disetujui Unit", color: "bg-blue-500" },
+      approved_pusat: { variant: "default", label: "Disetujui", color: "bg-green-500" },
+      rejected_unit: { variant: "destructive", label: "Ditolak Unit", color: "bg-red-500" },
+      rejected_pusat: { variant: "destructive", label: "Ditolak", color: "bg-red-600" },
     };
-    return <Badge variant={variants[status] || "outline"}>{status.toUpperCase()}</Badge>;
+    
+    const config = statusConfig[status] || { variant: "outline", label: status, color: "bg-gray-500" };
+    return (
+      <Badge variant={config.variant} className="font-medium">
+        {config.label}
+      </Badge>
+    );
   };
 
   if (loading) {
@@ -126,6 +141,11 @@ export const LeaveHistory = () => {
                         Diajukan: {format(new Date(app.created_at), 'dd MMM yyyy')}
                       </span>
                       <div className="flex gap-2">
+                        <CancelLeaveButton
+                          applicationId={app.id}
+                          status={app.status}
+                          onSuccess={fetchApplications}
+                        />
                         <Button
                           size="sm"
                           variant="outline"
@@ -138,7 +158,7 @@ export const LeaveHistory = () => {
                           <FileText className="w-3 h-3 mr-1" />
                           Surat Pengajuan
                         </Button>
-                        {app.status === 'approved' && (
+                        {app.status === 'approved_pusat' && (
                           <Button
                             size="sm"
                             variant="outline"

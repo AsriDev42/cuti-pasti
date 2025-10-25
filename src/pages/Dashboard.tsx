@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { LeaveBalanceCards } from "@/components/LeaveBalanceCards";
 import { LeaveHistory } from "@/components/LeaveHistory";
+import { LeaveStatistics } from "@/components/LeaveStatistics";
 import {
   User,
   Plus,
@@ -94,6 +95,12 @@ const Dashboard = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Leave Statistics */}
+      <div>
+        <h2 className="text-xl font-bold mb-4">Statistik Pengajuan Cuti</h2>
+        <LeaveStatistics />
+      </div>
 
       {/* Leave Balances */}
       <div>

@@ -45,6 +45,9 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AdminLeaveStatistics } from "@/components/AdminLeaveStatistics";
+import { LeaveBalanceInitializer } from "@/components/LeaveBalanceInitializer";
+import { ExportLeaveReport } from "@/components/ExportLeaveReport";
 
 interface ProfileWithUnit {
   id: string;
@@ -541,6 +544,23 @@ const AdminPusatDashboard = () => {
           </Card>
         ))}
       </div>
+
+      {/* Statistics Dashboard */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Dashboard Statistik Cuti</CardTitle>
+          <CardDescription>Analisis dan tren pengajuan cuti</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AdminLeaveStatistics />
+        </CardContent>
+      </Card>
+
+      {/* Leave Balance Initializer */}
+      <LeaveBalanceInitializer />
+
+      {/* Export Report */}
+      <ExportLeaveReport />
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
